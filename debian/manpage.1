@@ -1,0 +1,33 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" (C) Copyright 2014 unknown <admin@debian.pool>,
+.\"
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH RELAYNODE 1 "October  2, 2014"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+relaynode \- daemons fro fast bitcoin block relaying
+.SH SYNOPSIS
+.B relaynetworkclient
+.RI RELAY_SERVER BITCOIND_ADDRESS BITCOIND_PORT
+.br
+.B relaynetworkserver
+.RI [ options ]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B relaynode daemons.
+.PP
+\fBrelaynode\fP is a set of daemons that allow participating in fast bitcoin block relaying network.
+.br

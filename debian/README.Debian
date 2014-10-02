@@ -1,0 +1,6 @@
+relaynode for Debian
+--------------------
+
+This package provides only the C++ binaries of the relay node.
+
+ -- Jan Čapek <jan.capek@braiins.cz>  Thu, 02 Oct 2014 21:01:46 +0000

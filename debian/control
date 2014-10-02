@@ -1,0 +1,15 @@
+Source: relaynode
+Section: utils
+Priority: extra
+Maintainer: Jan Čapek <jan.capek@braiins.cz>
+Build-Depends: debhelper (>= 9.0.0)
+Standards-Version: 3.9.3
+Vcs-Git: https://github.com/honzik666/RelayNode
+Vcs-Browser: https://github.com/honzik666/RelayNode
+
+Package: relaynode
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Bitcoin network fast block relaying system
+ This software provides client, server, terminator, and proxy for the
+ fast block relaying mechanism

@@ -1,0 +1,8 @@
+relaynode for Debian
+--------------------
+
+This package is available from the git repository and can be built
+with the help of git-buildpackage.
+To build this package, run:
+
+$ git-buildpackage

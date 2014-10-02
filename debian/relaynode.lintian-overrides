@@ -1,0 +1,9 @@
+# we didn't submit the intend-to-package bug
+relaynode: new-package-should-close-itp-bug
+
+# there are issues with the following manpages, this should be fixed in
+# the future
+relaynode: binary-without-manpage usr/bin/relaynetworkclient
+relaynode: binary-without-manpage usr/bin/relaynetworkoutbound
+relaynode: binary-without-manpage usr/bin/relaynetworkproxy
+relaynode: binary-without-manpage usr/bin/relaynetworkterminator
