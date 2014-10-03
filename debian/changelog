@@ -1,5 +1,8 @@
 relaynode (0.1-1) unstable; urgency=low
 
-  * Initial release
+  * [7bdbe4d] c++ relaynode - added template rule for the linker
+  * [68f6a39] c++ relaynode Makefile - crypto/* added to clean rule
+  * [1ef1b18] c++ relaynode - server removed from 'all' target due to compilation issues
+  * [2ec131f] Initial import of Debian packaging files
 
- -- Jan Čapek <jan.capek@braiins.cz>  Thu, 02 Oct 2014 21:01:46 +0000
+ -- Jan Čapek <jan.capek@braiins.cz>  Fri, 03 Oct 2014 10:28:50 +0000
