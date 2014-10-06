@@ -17,10 +17,13 @@ UNIX_CXXFLAGS := -pthread -I/usr/include
 
 CXXFLAGS := $(COMMON_CXXFLAGS) $(UNIX_CXXFLAGS)
 
+
 # list of all targets
 targets = $(addprefix relaynetwork,client terminator proxy outbound)
 
-all: $(targets)
+all: $(filter %client,$(targets))
+
+all-targets: $(targets)
 
 relaynetworkclient: $(common_objs) client.o
 
@@ -36,7 +39,7 @@ relaynetworkproxy: $(common_objs) relayproxy.o
 relaynetworkoutbound: $(common_objs) p2poutbound.o
 
 relaynetwork%:
-	$(CXX) $(LDFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
 clean:
 	rm -f *.o crypto/*.o crypto/*~ *~ *.exe $(targets)
