@@ -1,3 +1,11 @@
+relaynode (0.1-2) unstable; urgency=low
+
+  * [867a75b] c++ - default make target builds only the client
+  * [4a2c508] c++ - CXXFLAGS added to the link rule, to link with pthread library properly
+  * [f8e3964] debian/rules - a new target is now being used instead of 'all' to build all binaries
+
+ -- Jan Čapek <jan.capek@braiins.cz>  Mon, 06 Oct 2014 14:10:57 +0000
+
 relaynode (0.1-1) unstable; urgency=low
 
   * [7bdbe4d] c++ relaynode - added template rule for the linker
