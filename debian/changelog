@@ -1,3 +1,31 @@
+relaynode (0.2-1) unstable; urgency=low
+
+  [ kanoi ]
+  * [abd4b97] c++ add a UTC timestamp to block recv'd messages
+
+  [ Matt Corallo ]
+  * [6259f6a] Makefile fixes
+  * [c10690a] Refresh client binaries
+  * [0146442] Run connection reaping in separate thread
+  * [2234a56] Fix Makefile
+  * [defcda9] Print bitcoind being disconnected
+  * [a821ea3] Fix makefile and update to (stripped) client exes
+  * [9ffeed8] Add Makefile target for servers
+  * [5c9c61a] Fucking ubuntu
+  * [ca0b895] But, no, relaly, FUCK ubuntu
+  * [ad1aa53] Add multi-connection whitelist option
+  * [c64fa40] Print error on select()/accept() failure
+  * [ce2f222] Log size of oversize'd relayed txn in client
+  * [3f82918] Fix server-side block compressor flag count tracking
+  * [f9d5004] Fix print warning
+  * [dd1468d] Make server more verbose on connection count changes
+  * [0219754] broaden make clean
+
+  [ Jan Čapek ]
+  * [29a66bf] Meaning of 'all-targets' Makefile target has changed, rules adjusted
+
+ -- Jan Čapek <jan.capek@braiins.cz>  Wed, 25 Mar 2015 10:11:07 +0000
+
 relaynode (0.1-3) unstable; urgency=low
 
   [ Matt Corallo ]
