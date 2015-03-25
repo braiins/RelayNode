@@ -177,13 +177,19 @@ private:
 				CSHA256 hash; // Probably not BE-safe
 				hash.Write(&(*std::get<1>(res))[sizeof(struct bitcoin_msg_header)], 80).Finalize(&fullhash[0]);
 				hash.Reset().Write(&fullhash[0], fullhash.size()).Finalize(&fullhash[0]);
+				struct tm tm;
+				time_t now = time(NULL);
+				gmtime_r(&now, &tm);
+				printf("[%d-%02d-%02d %02d:%02d:%02d+00] ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 				for (unsigned int i = 0; i < fullhash.size(); i++)
 					printf("%02x", fullhash[fullhash.size() - i - 1]);
 				printf(" recv'd, size %lu with %u bytes on the wire\n", (unsigned long)std::get<1>(res)->size() - sizeof(bitcoin_msg_header), std::get<0>(res));
 			} else if (header.type == END_BLOCK_TYPE) {
 			} else if (header.type == TRANSACTION_TYPE) {
-				if (message_size > MAX_RELAY_TRANSACTION_BYTES && (recv_tx_cache.flagCount() >= MAX_EXTRA_OVERSIZE_TRANSACTIONS || message_size > MAX_RELAY_OVERSIZE_TRANSACTION_BYTES))
+				if (message_size > MAX_RELAY_TRANSACTION_BYTES && (recv_tx_cache.flagCount() >= MAX_EXTRA_OVERSIZE_TRANSACTIONS || message_size > MAX_RELAY_OVERSIZE_TRANSACTION_BYTES)) {
+					printf("Freely relayed tx of size %u, with %lu oversize txn already present\n", message_size, recv_tx_cache.flagCount());
 					return reconnect("got freely relayed transaction too large");
+				}
 
 				auto tx = std::make_shared<std::vector<unsigned char> > (message_size);
 				if (read_all(sock, (char*)&(*tx)[0], message_size) < (int64_t)(message_size))
