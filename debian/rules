@@ -8,7 +8,7 @@
 	dh $@
 
 override_dh_auto_build:
-	make -C c++ all-targets
+	make -C c++ server-targets
 
 override_dh_auto_clean:
 	make -C c++ clean

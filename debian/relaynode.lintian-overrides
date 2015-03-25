@@ -7,3 +7,4 @@ relaynode: binary-without-manpage usr/bin/relaynetworkclient
 relaynode: binary-without-manpage usr/bin/relaynetworkoutbound
 relaynode: binary-without-manpage usr/bin/relaynetworkproxy
 relaynode: binary-without-manpage usr/bin/relaynetworkterminator
+relaynode: binary-without-manpage usr/bin/relaynetworkserver
