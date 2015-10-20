@@ -25,7 +25,7 @@ protected:
     size_type nMaxSize;
 
 public:
-    mruset(size_type nMaxSizeIn = 0) { nMaxSize = nMaxSizeIn; }
+    mruset(size_type nMaxSizeIn) { nMaxSize = nMaxSizeIn; }
     iterator begin() const { return set.begin(); }
     iterator end() const { return set.end(); }
     size_type size() const { return set.size(); }
@@ -36,16 +36,23 @@ public:
     bool inline friend operator==(const mruset<T>& a, const mruset<T>& b) { return a.set == b.set; }
     bool inline friend operator==(const mruset<T>& a, const std::set<T>& b) { return a.set == b; }
     bool inline friend operator<(const mruset<T>& a, const mruset<T>& b) { return a.set < b.set; }
+    size_type erase(const value_type& val) { return set.erase(val); }
+private:
+    void inline limit_size() {
+        if (nMaxSize)
+            while (set.size() > nMaxSize)
+            {
+                set.erase(queue.front());
+                queue.pop_front();
+            }
+    }
+public:
     std::pair<iterator, bool> insert(const key_type& x)
     {
         std::pair<iterator, bool> ret = set.insert(x);
         if (ret.second)
         {
-            if (nMaxSize && queue.size() == nMaxSize)
-            {
-                set.erase(queue.front());
-                queue.pop_front();
-            }
+            limit_size();
             queue.push_back(x);
         }
         return ret;
@@ -53,13 +60,8 @@ public:
     size_type max_size() const { return nMaxSize; }
     size_type max_size(size_type s)
     {
-        if (s)
-            while (queue.size() > s)
-            {
-                set.erase(queue.front());
-                queue.pop_front();
-            }
         nMaxSize = s;
+        limit_size();
         return nMaxSize;
     }
 };

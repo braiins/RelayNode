@@ -2,6 +2,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 #include <assert.h>
 #include <string.h>
@@ -56,20 +57,10 @@ private:
 			me->net_thread->join();
 		me->net_thread = me->new_thread;
 
-		me->sock = socket(AF_INET6, SOCK_STREAM, 0);
+		std::string error;
+		me->sock = create_connect_socket(me->server_host, 8336, error);
 		if (me->sock <= 0)
-			return me->reconnect("unable to create socket", true);
-
-		sockaddr_in6 addr;
-		if (!lookup_address(me->server_host, &addr))
-			return me->reconnect("unable to lookup host", true);
-
-		int v6only = 0;
-		setsockopt(me->sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&v6only, sizeof(v6only));
-
-		addr.sin6_port = htons(8336);
-		if (connect(me->sock, (struct sockaddr*)&addr, sizeof(addr)))
-			return me->reconnect("failed to connect()", true);
+			return me->reconnect(error, true);
 
 		fcntl(me->sock, F_SETFL, fcntl(me->sock, F_GETFL) & ~O_NONBLOCK);
 
@@ -107,6 +98,15 @@ private:
 		char msg[message_size];
 		if (read_all(sock, (char*)msg, message_size) < (int64_t)(message_size))
 			return reconnect("failed to read message data");
+
+		struct sockaddr_in6 addr;
+		socklen_t len = sizeof(addr);
+		if (getsockname(sock, (struct sockaddr*)&addr, &len) != 0)
+			return reconnect("failed to get bound host/port");
+		if (len != sizeof(addr))
+			return reconnect("getsockname didnt return a sockaddr_in6?");
+
+		printf("Connected to %s local_port %d at %lu\n", server_host, addr.sin6_port, epoch_millis_lu(std::chrono::system_clock::now()));
 
 		provide_sock(sock);
 		return reconnect("provide_sock returned");

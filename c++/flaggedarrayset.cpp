@@ -1,106 +1,378 @@
 #include "flaggedarrayset.h"
 
 #include <map>
+#include <set>
 #include <vector>
+#include <list>
 #include <thread>
+#include <mutex>
+#include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 /******************************
  **** FlaggedArraySet util ****
  ******************************/
-bool FlaggedArraySet::contains(const std::shared_ptr<std::vector<unsigned char> >& e) { return backingMap.count(ElemAndFlag(e, false)); }
+struct PtrPair {
+	std::shared_ptr<std::vector<unsigned char> > elem;
+	std::shared_ptr<std::vector<unsigned char> > elemHash;
+	PtrPair(const std::shared_ptr<std::vector<unsigned char> >& elemIn, const std::shared_ptr<std::vector<unsigned char> >& elemHashIn) :
+		elem(elemIn), elemHash(elemHashIn) {}
+};
 
-void FlaggedArraySet::remove(std::map<uint64_t, std::map<ElemAndFlag, uint64_t>::iterator>::iterator rm) {
-	uint64_t index = rm->first;
-	if (rm->second->first.flag)
+struct SharedPtrElem {
+	PtrPair e;
+	bool operator==(const SharedPtrElem& o) const { return *e.elemHash == *o.e.elemHash; }
+	bool operator!=(const SharedPtrElem& o) const { return *e.elemHash != *o.e.elemHash; }
+	bool operator< (const SharedPtrElem& o) const { return *e.elemHash <  *o.e.elemHash; }
+	bool operator<=(const SharedPtrElem& o) const { return *e.elemHash <= *o.e.elemHash; }
+	bool operator> (const SharedPtrElem& o) const { return *e.elemHash >  *o.e.elemHash; }
+	bool operator>=(const SharedPtrElem& o) const { return *e.elemHash >= *o.e.elemHash; }
+	SharedPtrElem(const PtrPair& eIn) : e(eIn) {}
+};
+
+class Deduper {
+private:
+	std::mutex dedup_mutex;
+	std::set<FlaggedArraySet*> allArraySets;
+	std::thread dedup_thread;
+public:
+	Deduper()
+		: dedup_thread([&]() {
+#ifdef PRECISE_BENCH
+			return;
+#endif
+			while (true) {
+				bool haveMultipleSets = false;
+				{
+					std::lock_guard<std::mutex> lock(dedup_mutex);
+					haveMultipleSets = allArraySets.size() > 1;
+				}
+
+				if (haveMultipleSets) {
+					std::list<PtrPair> ptrlist;
+
+					{
+						std::lock_guard<std::mutex> lock(dedup_mutex);
+						for (FlaggedArraySet* fas : allArraySets) {
+							if (fas->allowDups)
+								continue;
+							if (!fas->mutex.try_lock())
+								continue;
+							std::lock_guard<WaitCountMutex> lock(fas->mutex, std::adopt_lock);
+							for (const auto& e : fas->backingMap) {
+								if (fas->mutex.wait_count())
+									break;
+								assert(e.first.elem);
+								ptrlist.push_back(PtrPair(e.first.elem, e.first.elemHash));
+							}
+						}
+					}
+
+					std::set<SharedPtrElem> txset;
+					std::map<std::vector<unsigned char>*, PtrPair> duplicateMap;
+					std::list<PtrPair> deallocList;
+					for (const auto& ptr : ptrlist) {
+						assert(ptr.elemHash);
+						auto res = txset.insert(SharedPtrElem(ptr));
+						if (!res.second && res.first->e.elem != ptr.elem)
+							duplicateMap.insert(std::make_pair(&(*ptr.elem), res.first->e));
+					}
+
+					int dedups = 0;
+					{
+						std::lock_guard<std::mutex> lock(dedup_mutex);
+						for (FlaggedArraySet* fas : allArraySets) {
+							if (fas->allowDups)
+								continue;
+							if (!fas->mutex.try_lock())
+								continue;
+							std::lock_guard<WaitCountMutex> lock(fas->mutex, std::adopt_lock);
+							for (auto& e : fas->backingMap) {
+								if (fas->mutex.wait_count())
+									break;
+								assert(e.first.elem);
+								auto it = duplicateMap.find(&(*e.first.elem));
+								if (it != duplicateMap.end()) {
+									assert(*it->second.elem == *e.first.elem);
+									assert(*it->second.elemHash == *e.first.elemHash);
+									deallocList.emplace_back(it->second);
+									const_cast<ElemAndFlag&>(e.first).elem.swap(deallocList.back().elem);
+									const_cast<ElemAndFlag&>(e.first).elemHash.swap(deallocList.back().elemHash);
+									dedups++;
+								}
+							}
+						}
+					}
+#ifdef FOR_TEST
+					if (dedups)
+						printf("Deduped %d txn\n", dedups);
+#endif
+				}
+#ifdef FOR_TEST
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+#else
+				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+#endif
+			}
+		})
+	{}
+
+	~Deduper() {
+		//TODO: close thread
+	}
+
+	void addFAS(FlaggedArraySet* fas) {
+		std::lock_guard<std::mutex> lock(dedup_mutex);
+		allArraySets.insert(fas);
+	}
+
+	void removeFAS(FlaggedArraySet* fas) {
+		std::lock_guard<std::mutex> lock(dedup_mutex);
+		allArraySets.erase(fas);
+	}
+};
+
+static Deduper* deduper;
+
+FlaggedArraySet::FlaggedArraySet(unsigned int maxSizeIn, bool allowDupsIn) :
+		maxSize(maxSizeIn), backingMap(maxSize), allowDups(allowDupsIn) {
+	clear();
+	if (!deduper)
+		deduper = new Deduper();
+	deduper->addFAS(this);
+}
+
+FlaggedArraySet::~FlaggedArraySet() {
+	deduper->removeFAS(this);
+	assert(sanity_check());
+}
+
+
+ElemAndFlag::ElemAndFlag(const std::shared_ptr<std::vector<unsigned char> >& elemIn, bool flagIn, bool allowDupsIn, bool setHash) :
+	flag(flagIn), allowDups(allowDupsIn), elem(elemIn)
+{
+	if (setHash) {
+		elemHash = std::make_shared<std::vector<unsigned char> >(32);
+		double_sha256(&(*elem)[0], &(*elemHash)[0], elem->size());
+	}
+}
+ElemAndFlag::ElemAndFlag(const std::shared_ptr<std::vector<unsigned char> >& elemHashIn, std::nullptr_t) :
+	elemHash(elemHashIn) {}
+ElemAndFlag::ElemAndFlag(const std::vector<unsigned char>::const_iterator& elemBeginIn, const std::vector<unsigned char>::const_iterator& elemEndIn, bool flagIn, bool allowDupsIn) :
+	flag(flagIn), allowDups(allowDupsIn), elemBegin(elemBeginIn), elemEnd(elemEndIn) {}
+
+bool ElemAndFlag::operator == (const ElemAndFlag& o) const {
+	if ((elem && o.elem) || (elemHash && o.elemHash)) {
+		bool hashSet = o.elemHash && elemHash;
+		if (allowDups)
+			return (elem && o.elem && o.elem == elem) || (hashSet && o.elemHash == elemHash);
+		return o.elem == elem ||
+			(hashSet && *o.elemHash == *elemHash) ||
+			(!hashSet && *o.elem == *elem);
+	} else {
+		std::vector<unsigned char>::const_iterator o_begin, o_end, e_begin, e_end;
+		if (elem) {
+			e_begin = elem->begin();
+			e_end = elem->end();
+		} else {
+			e_begin = elemBegin;
+			e_end = elemEnd;
+		}
+		if (o.elem) {
+			o_begin = o.elem->begin();
+			o_end = o.elem->end();
+		} else {
+			o_begin = o.elemBegin;
+			o_end = o.elemEnd;
+		}
+		return o_end - o_begin == e_end - e_begin && !memcmp(&(*o_begin), &(*e_begin), o_end - o_begin);
+	}
+}
+
+size_t std::hash<ElemAndFlag>::operator()(const ElemAndFlag& e) const {
+	std::vector<unsigned char>::const_iterator it, end;
+	if (e.elem) {
+		it = e.elem->begin();
+		end = e.elem->end();
+	} else {
+		it = e.elemBegin;
+		end = e.elemEnd;
+	}
+
+	if (end - it < 5 + 32 + 4) {
+		assert(0);
+		return 42; // WAT?
+	}
+	it += 5 + 32 + 4 - 8;
+	size_t res = 0;
+	static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "Your size_t is neither 32-bit nor 64-bit?");
+	for (unsigned int i = 0; i < 8; i += sizeof(size_t)) {
+		for (unsigned int j = 0; j < sizeof(size_t); j++)
+			res ^= *(it + i + j) << 8*j;
+	}
+	return res;
+}
+
+
+bool FlaggedArraySet::sanity_check() const {
+	size_t size = indexMap.size();
+	assert(backingMap.size() == size);
+	assert(this->size() == size - to_be_removed.size());
+
+	size_t expected_flag_count = 0;
+	for (uint64_t i = 0; i < size; i++) {
+		std::unordered_map<ElemAndFlag, uint64_t>::iterator it = indexMap.at(i);
+		assert(it != backingMap.end());
+		assert(it->second == i + offset);
+		assert(backingMap.find(it->first) == it);
+		assert(&backingMap.find(it->first)->first == &it->first);
+		if (it->first.flag)
+			expected_flag_count++;
+	}
+	assert(expected_flag_count == flag_count);
+
+	ssize_t expected_flags_removed = 0;
+	for (size_t i = 0; i < to_be_removed.size(); i++) {
+		std::unordered_map<ElemAndFlag, uint64_t>::iterator it = indexMap.at(to_be_removed[i] + i);
+		if (it->first.flag)
+			expected_flags_removed++;
+	}
+	assert(expected_flags_removed == flags_to_remove);
+
+	return expected_flags_removed == flags_to_remove && expected_flag_count == flag_count;
+}
+
+void FlaggedArraySet::remove_(size_t index) {
+	auto& rm = indexMap[index];
+	assert(index < indexMap.size());
+	if (rm->first.flag)
 		flag_count--;
 
-	ElemAndFlag e;
-	assert((e = rm->second->first).elem);
-	assert(index == rm->second->second);
-	assert(size() == total - offset);
+	size_t size = backingMap.size();
 
-	if (index != offset) {
-		assert(offset < total && offset < index);
-		#ifndef NDEBUG
-			bool foundRmTarget = false;
-		#endif
-		for (uint64_t i = offset; i < total; i++) {
-			std::map<uint64_t, std::map<ElemAndFlag, uint64_t>::iterator>::iterator it;
-			assert((it = backingReverseMap.find(i)) != backingReverseMap.end());
-			assert(it->second->second == i);
-			assert(backingMap.find(it->second->first) == it->second);
-			assert((it == rm && !foundRmTarget && (foundRmTarget = true)) || (it != rm));
-			assert((it != rm && (it->second->first < e || e < it->second->first)) || (it == rm && !(it->second->first < e || e < it->second->first)));
-		}
-		assert(foundRmTarget);
+	if (index < size/2) {
+		for (uint64_t i = 0; i < index; i++)
+			indexMap[i]->second++;
+		offset++;
+	} else
+		for (uint64_t i = index + 1; i < size; i++)
+			indexMap[i]->second--;
+	backingMap.erase(rm);
+	indexMap.erase(indexMap.begin() + index);
+}
 
-		auto last = rm; last++;
-		auto it = backingReverseMap.find(offset);
-		auto elem = it->second;
-		it = backingReverseMap.erase(it);
-		backingMap.erase(rm->second);
-		for (; it != last; it++) {
-			auto new_elem = it->second;
-			elem->second++;
-			it->second = elem;
-			elem = new_elem;
+inline void FlaggedArraySet::cleanup_late_remove() const {
+	assert(sanity_check());
+	if (to_be_removed.size()) {
+		for (unsigned int i = 0; i < to_be_removed.size(); i++) {
+			assert((unsigned int)to_be_removed[i] < indexMap.size());
+			const_cast<FlaggedArraySet*>(this)->remove_(to_be_removed[i]);
 		}
-
-		for (uint64_t i = offset + 1; i < total; i++) {
-			std::map<uint64_t, std::map<ElemAndFlag, uint64_t>::iterator>::iterator it;
-			assert((it = backingReverseMap.find(i)) != backingReverseMap.end());
-			assert(it->second->second == i);
-			assert(backingMap.find(it->second->first) == it->second);
-			assert(it->second->first < e || e < it->second->first);
-		}
-	} else {
-		backingMap.erase(rm->second);
-		backingReverseMap.erase(rm);
+		to_be_removed.clear();
+		flags_to_remove = 0;
+		max_remove = 0;
 	}
-	offset++;
+	assert(sanity_check());
+}
+
+bool FlaggedArraySet::contains(const std::shared_ptr<std::vector<unsigned char> >& e) const {
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	cleanup_late_remove();
+	return backingMap.count(ElemAndFlag(e, false, allowDups, false));
+}
+
+bool FlaggedArraySet::contains(const unsigned char* elemHash) const {
+	//TODO: Come up with a cheap way to optimize this?
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	cleanup_late_remove();
+	ElemAndFlag e(std::make_shared<std::vector<unsigned char> >(elemHash, elemHash + 32), NULL);
+	for (const std::unordered_map<ElemAndFlag, uint64_t>::iterator& it : indexMap)
+		if (it->first == e)
+			return true;
+	return false;
 }
 
 void FlaggedArraySet::add(const std::shared_ptr<std::vector<unsigned char> >& e, bool flag) {
-	auto res = backingMap.insert(std::make_pair(ElemAndFlag(e, flag), total));
+	ElemAndFlag elem(e, flag, allowDups, true);
+
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	cleanup_late_remove();
+
+	auto res = backingMap.insert(std::make_pair(elem, size() + offset));
 	if (!res.second)
 		return;
 
-	backingReverseMap[total++] = res.first;
+	indexMap.push_back(res.first);
 
+	assert(size() <= maxSize + 1);
 	while (size() > maxSize)
-		remove(backingReverseMap.begin());
+		remove_(0);
 
 	if (flag)
 		flag_count++;
+
+	assert(sanity_check());
 }
 
-int FlaggedArraySet::remove(const std::shared_ptr<std::vector<unsigned char> >& e) {
-	auto it = backingMap.find(ElemAndFlag(e, false));
+int FlaggedArraySet::remove(const std::vector<unsigned char>::const_iterator& start, const std::vector<unsigned char>::const_iterator& end) {
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	cleanup_late_remove();
+
+	auto it = backingMap.find(ElemAndFlag(start, end, false, allowDups));
 	if (it == backingMap.end())
 		return -1;
 
 	int res = it->second - offset;
-	remove(backingReverseMap.find(it->second));
+	remove_(res);
+
+	assert(sanity_check());
 	return res;
 }
 
-std::shared_ptr<std::vector<unsigned char> > FlaggedArraySet::remove(int index) {
-	auto it = backingReverseMap.find(index + offset);
-	if (it == backingReverseMap.end())
-		return std::make_shared<std::vector<unsigned char> >();
+bool FlaggedArraySet::remove(int index, std::vector<unsigned char>& elemRes, unsigned char* elemHashRes) {
+	std::lock_guard<WaitCountMutex> lock(mutex);
 
-	std::shared_ptr<std::vector<unsigned char> > e = it->second->first.elem;
-	remove(it);
-	return e;
+	if (index < max_remove)
+		cleanup_late_remove();
+	int lookup_index = index + to_be_removed.size();
+
+	if ((unsigned int)lookup_index >= indexMap.size())
+		return false;
+
+	const ElemAndFlag& e = indexMap[lookup_index]->first;
+	assert(e.elem && e.elemHash);
+	memcpy(elemHashRes, &(*e.elemHash)[0], 32);
+	elemRes = *e.elem;
+
+	if (index >= max_remove) {
+		to_be_removed.push_back(index);
+		max_remove = index;
+		if (e.flag) flags_to_remove++;
+	} else {
+		cleanup_late_remove();
+		remove_(index);
+	}
+
+	assert(sanity_check());
+	return true;
 }
 
 void FlaggedArraySet::clear() {
-	flag_count = 0; total = 0; offset = 0;
-	backingMap.clear(); backingReverseMap.clear();
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	if (!indexMap.empty() && !backingMap.empty())
+		assert(sanity_check());
+
+	flag_count = 0; offset = 0;
+	flags_to_remove = 0; max_remove = 0;
+	backingMap.clear(); indexMap.clear(); to_be_removed.clear();
 }
 
-void FlaggedArraySet::for_all_txn(const std::function<void (std::shared_ptr<std::vector<unsigned char> >)> callback) {
-	for (std::pair<const uint64_t, std::map<ElemAndFlag, uint64_t>::iterator>& e : backingReverseMap)
-		callback(e.second->first.elem);
+void FlaggedArraySet::for_all_txn(const std::function<void (const std::shared_ptr<std::vector<unsigned char> >&)> callback) const {
+	std::lock_guard<WaitCountMutex> lock(mutex);
+	cleanup_late_remove();
+	for (const auto& e : indexMap) {
+		assert(e->first.elem);
+		callback(e->first.elem);
+	}
 }
