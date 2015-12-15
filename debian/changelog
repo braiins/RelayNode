@@ -1,3 +1,291 @@
+relaynode (0.3-1) unstable; urgency=low
+
+  [ Matt Corallo ]
+  * [fe292f1] Fix blow-up disconnect logic, add timestamps to stderr
+  * [78b879a] Print duplicate connection attempts and disconnectFlags status
+  * [62e700c] Use constants for disconnectFlags flags
+  * [89a319e] Use shutdown() not close() (duh), and be more aggressive
+  * [10320f4] Add test binary
+  * [f72487a] getblockhash func, RelayNodeCompressor class
+  * [33846a3] Move compressor code to cpp file
+  * [b4ef9bf] Test update
+  * [aba2ae5] Use getblockhash in server
+  * [809abe2] Test more blocks, diverse txn
+  * [7b88b2a] Fix SEGFAULT when sent an invalid block
+  * [4d7e077] Make tests do a full compress/decompress round
+  * [c8b7a6e] Merge sane into compress
+  * [ed332f1] Time decompress in test as well
+  * [e36f0ba] Also test for_each_sent_tx in several ways
+  * [3df778f] Remove Java client (fixes #10)
+  * [8d0b91a] Remove python client (fixes #3)
+  * [5692e7a] Default CXX to c++ (thanks Sam Rushing)
+
+  [ rushing ]
+  * [9e0db23] first whack at covering the 'endian' situation.  this covers freebsd 10 but probably not freebsd < 10.
+  * [377c915] endian: __BSD__ => __FreeBSD__
+
+  [ Matt Corallo ]
+  * [9aa0f13] Fix indentation to my neurotic, strange preferences
+
+  [ rushing ]
+  * [62fe235] need stdio, sys/socket, netinet/in.h.
+  * [103e4e1] use uname for platform distinction.
+
+  [ Matt Corallo ]
+  * [ab0bf2c] Check for X86 before setting X86_BSD
+  * [3f2a227] Add FORCE_LE flag for OSX
+
+  [ rushing ]
+  * [dfa00c4] Porting to OSX & FreeBSD.
+  * [448f08a] need stdio, sys/socket, netinet/in.h.
+
+  [ Sam Rushing ]
+  * [5e166cc] get -flto & X86_BSD on darwin.
+
+  [ Matt Corallo ]
+  * [dc63b8e] Remove useless Makefile option
+  * [0092385] Use deterministic random tests
+  * [29718ec] Add bench mode to test
+  * [2183e2a] Close them file descriptors
+  * [251a547] Run slightly fewer iterations
+  * [d268bf1] Fix Makefile
+  * [43f3961] Use unordered map in flaggedarrayset
+  * [f9d5e2c] Fix asserts in flaggedarrayset after unordered_map change
+  * [bb4b7ca] Fix test to catch when block compression fails
+  * [dd8d2ce] Add march/mtune to Makefile, which helps a lot
+  * [60fff4d] Switch to O3, which is also a small win
+  * [92a2ac8] Regenerate client binaries
+  * [51cab5a] Get local node mempool on first connect in client
+  * [74447f4] Regenerate client binaries
+  * [c659cf1] Always download all headers on p2p connect on server
+  * [f79ad65] Fix FlaggedArraySet Elem ==
+  * [f209cd0] NEW VERSION: Fix FlaggedArraySet elem ==
+  * [fddb935] Update client binaries
+  * [5fb3ab1] Fix inverted version check in server
+  * [3985614] Make == at least return true for self in allowDups
+  * [6632431] Bump tx cache size significantly
+  * [d0433f8] Update client binaries
+  * [70bafaf] Add a generic variant to Makefile
+  * [ad8d390] Update clients with generic
+  * [4e70039] Hold map_mutex between calling compressor and sending in server
+  * [3f7fc53] Replace FOR_VALGRIND with FOR_TEST
+  * [0a236ca] Fix tests after increased cache size
+  * [b4f00c6] Make for_each_tx use const references
+  * [64c839e] Add background memory dedup thread
+  * [9bc24a5] Remove FOR_TEST try_lock guards
+  * [25c1bd7] Minor tweaks and test updates
+  * [c02a013] Fix mistaken public->private switch
+  * [25a8f28] Clean up time tracking in test
+  * [ebfe690] Swap out backingReverseMap for a vector
+  * [21109f0] Update client binaries
+  * [3056ee1] Fix build on old gccs
+  * [a7bddf2] Always include debug symbols
+  * [c226fd0] Move server general connection stuff to a class
+  * [88d821f] Move connection out of header file
+  * [7ae7d07] Slight tweaks to Connection
+  * [1cef606] Add an OutboundPersistentConnection base class
+  * [025c939] Convert P2PRelayer to use OutboundPersistentConnection
+  * [3942dda] Update client bins
+  * [67e962d] requestAfterSend to keep client mempool better synced
+  * [8786501] Move construction_done down
+  * [7172ff7] Fix hilariously rare connection race
+  * [8ced534] Do connection in a new thread
+  * [e0c1d70] const'ify two things in connection
+  * [3107d4c] Regenerate client binaries
+  * [eb68703] Move critical function out of assert
+  * [c263cd2] Update client bins
+  * [d432d0b] Tweak logging in server
+  * [eb60a3a] Revert accidental O3 -> O0
+  * [127c9c7] Switch CSHA256 usage to util functions
+  * [a95d7ff] Switch to simple SHA256 impl that calls asm version
+  * [5942031] Regenerate client bins
+  * [b49f91e] Fix double_sha256 with no native support and no data to hash
+  * [4e29bfa] Regenerate client binaries
+  * [0279275] Dont try to use sse4 sha256 on sse4a
+  * [1efb3f9] Switch back to time-since-epoch-millis in server printing
+  * [7c2cd0e] Fix warning and constify a few things
+  * [7cdebfe] Update README with domain name
+  * [2c91320] Move blocksAlreadySeen check to last step
+  * [6ff5f0a] Fix error message
+  * [731a7be] Tweak FAS in variant=test
+  * [4e8b8db] Fix send_mutex outside lock brokenness
+  * [33643b7] Use a print_hash util
+  * [c164986] Do more testing in test
+  * [df6f234] Clean up a few things to make clang happy
+  * [f0a68ae] Finally fix OSX build
+  * [5f57000] Fix unbounded memory usage in terminator
+  * [e081f26] Fix Win32 socket read/recv
+  * [538a27e] Update client bins
+  * [1f0af70] Make decompress_relay_block one function
+  * [f5110f6] Do merkle-tree building during read from relay peers
+  * [de03171] Fix potential race in hashing
+  * [267dccb] Store elemHash in flaggedarrayset elements
+  * [6f2d199] Also dedup elemHash in flaggedarrayset
+  * [e990b09] Get pre-calculated hash for merkle tree building during decompress
+  * [fef651d] Add a more precise benchmarking option
+  * [5d9b132] Move compress to its own non-inline function
+  * [8759fc1] Decrease test sleep time
+  * [76d7f31] Remove uneccessary shared_ptr lock-taking
+  * [c4af9fa] Tweak WaitCountMutex with some gonna-lock hints
+  * [1336d3f] Move move_forward to header
+  * [4a9111f] Add delayed-remove logic to FAS
+  * [45a3412] Make decompress_relay_block utilize FAS' new smarts
+  * [211e0ae] Split out sanity_check in FAS
+  * [898580c] Only lto in non-test builds
+  * [72da830] Cleanup types in varint read
+  * [017bfe6] Add support for an elem that is just iterators, not a ptr
+  * [e4e30d1] Use iterator-based lookup
+  * [dc97dcb] Switch client to use Connection for both connections
+  * [3aa415a] Use a std::function for decompression reads
+  * [9a77678] Fix outbound throttling
+  * [49d47c2] Test read from buffer instead of socket
+  * [ad609ad] Make client ping servers to auto-select the best one
+  * [70e49c6] Sanity check before clear in FAS
+  * [df47509] Add slightly-broken separate read thread
+  * [8048c7e] Move all reading to global select thread
+  * [0b99051] Fix server in non-connectable state with too many txn
+  * [7d59760] Add pipe-wakeup to event thread
+  * [311533d] Limit inbound buffer size
+  * [2274ae0] Move GlobalNetProcess class to top
+  * [bb0eb01] Cache Connection*
+  * [f48b9ad] Move writing to global select event thread
+  * [1a9abf6] Fix initial_outbound_throttle, disconnect logic
+  * [f375cb0] Properly cache errno across threads for disconnect reasoning
+  * [fad3efd] Fix disconnect race, win32 blocking
+  * [c41afca] Remove warning and make valgind happy
+  * [905a8b7] Fix lookup on BSD
+  * [4eac9cb] Dont hide MSG_NOSIGNAL on FreeBSD
+  * [3d61610] Fix missing lock
+  * [d357fe7] Make helgrind happy about allArraySets.size() without lock
+  * [02a00c1] Dont try to deallocate addrinfo if its NULL
+  * [3dd4ee6] Fix pipe creation in non-test
+  * [925a3f7] Add an assert for thread-calling-disconnect
+  * [67555ed] Change remove() call semantics
+  * [8cd0bf8] Fix flags_to_remove accounting
+  * [c7a709f] Fix printf modes
+  * [b34e2df] Fix sanity_check()
+  * [dd0dd20] Fix CPU usage bug on initial_outbound_throttle
+  * [040d067] Fix some total-tracking bugs
+  * [e7648b5] Check block version before relay
+  * [62d881f] Do more tests and print RDNS of client server checks
+  * [666d6cf] Update client bins
+  * [2831552] Only build the sha asm we're using
+  * [35f4664] Fix compile warnings
+  * [408186b] Deallocate memory in destructor to avoid race
+  * [0add784] Allow writing during outbound data dump
+  * [5a65bad] Move functions to cpp
+  * [acadf1c] Tweak throttle logic
+  * [56bbbf5] Expose send_mutex and iot to outbound connections
+  * [d218c49] Give p2p clients knowledge of when mempool pull finishes
+  * [f9aff45] Use iot in client to send initial mempool
+  * [2df7248] Print assertion errors to stderr
+  * [215829f] DIRTY HACK: Hold send_mutex in trustedp2p to limit txn tx speed
+  * [04e1239] DIRTY HACK: Make trusted p2p throttle more than others
+  * [e93e311] Revert "DIRTY HACK: Make trusted p2p throttle more than others"
+  * [9cbfe21] Revert "DIRTY HACK: Hold send_mutex in trustedp2p to limit txn tx speed"
+  * [6a56853] Fix disconnect logic
+  * [75d7eb1] Minor tweaks
+  * [e92a2f4] Change how we fetch txn on p2p connections...
+  * [2c08d3e] Fix bug preventing IOT from being set
+  * [db1fc19] Fix double-unlock in client
+  * [45ebb67] Add amd64 alias
+  * [0b17e4d] Add FAS method to check if tx is contained by hash
+  * [dc7698b] Allow p2pclients to determine whether to fetch a transaction
+  * [840e4a6] Add OOB-txn to server to receive txn not in the compressor
+  * [f7f400a] Send OOB txn from client when we dont support blk_txn
+  * [2027330] Better handling when no servers are up
+  * [dd2766d] Fix inv requesting
+  * [8dd3a12] Fix client server search
+  * [1775f3e] Fix getdata building
+  * [85603d7] Fix oob read in sending getdata
+  * [6a9aecb] Request mempool/txn in separate trusted p2p connection
+  * [be176cd] Allow using entirely separate bitcoind for mempool requests
+  * [5d60544] Dedup sending txn in p2pclient
+  * [326979e] Fix tracking of multiple whitelisted clients in server
+  * [5ffa2d4] Fix hostname port-appending
+  * [53a19d1] Fix block requesting
+  * [a8515ed] Fix print ordering when send/recv'ing txn in client
+  * [5bb9af8] disconnect const char* -> std::string
+  * [3bbe7c2] Simplify mruset/add erase function
+  * [6835a56] Add empty rpcclient
+  * [c55a07a] Remove p2pclient mempool requesting
+  * [d5a5ef7] Add P2PClient transaction requesting
+  * [9ee7030] Use RPCClient in server
+  * [e65a308] Print a sponsor on the client
+  * [4fd0c93] Timeout RPC thread reading
+  * [47f11e4] Switch to system_clock because steady_clock spins
+  * [2dd6536] Preserve send_mutex* lock order
+  * [069af58] Fix deadlock when sending sponsor message
+  * [1c624de] Ignore sponsor messages on server
+  * [8fd142f] Increase outbound buffer on p2p connections
+  * [6c94cd2] Default all connections to max 10M
+  * [f8e6885] Save memory in initial outbound with shared_ptrs
+  * [1ca690b] Track seen blocks and parse inv message in outbound p2p connections
+  * [44d0495] Print local port on client connect
+  * [b53a4fc] Limit tx updates to same rate as IOT
+  * [b2cd508] Fix IOT on server since txn are two messages now
+  * [8940ac2] Fix print statement in proxy
+  * [3517d27] Always use alternate naming for whitelisted clients
+  * [c0cb7ef] Calc msg hash while reading it
+  * [d260650] Skip block msg hashing in server to local terminator
+  * [6cfb9e3] Print hashes all at once to cut down on mid-write splits
+  * [2b5a686] Remove old Linux bin, update windows bin
+  * [6d5e115] Tweak tx relay rate-limit slightly
+  * [b07905a] Parameterize RPCClient
+  * [b6bf968] Split out socket creation/connection
+  * [07ec7dd] Add allow-partial-reads method to Connection
+  * [b1e36e7] Add blocking write to Connection
+  * [ce285ea] Fix wakeup condition when writing bytes
+  * [6cc459f] Add maybe_read and disconnect to OutboundPersistentConnection
+  * [9cf63ea] Switch on_disconnect to a std::function from a virtual function
+  * [2915aac] Add, and switch to LZMA-compressed RPC clients in server
+  * [9b6aa9b] Disable yasm on variant=generic
+  * [bc2448f] Provide workaround for older gccs
+  * [2ae0651] Properly reset on LZMA disconnect
+  * [bf13b8e] Switch to 9/10ths the size of the pool per request
+  * [5ac371b] Revert "Properly reset on LZMA disconnect"
+  * [5e5112f] Revert "Provide workaround for older gccs"
+  * [73e495e] Revert "Add, and switch to LZMA-compressed RPC clients in server"
+  * [56964d7] Revert "Switch on_disconnect to a std::function from a virtual function"
+  * [f2cc23d] Revert "Add maybe_read and disconnect to OutboundPersistentConnection"
+  * [9272363] Revert "Add blocking write to Connection"
+  * [32f5646] Revert "Add allow-partial-reads method to Connection"
+  * [a4c33b3] Revert "Parameterize RPCClient"
+  * [33328bc] Use RPC on server, not client
+  * [8bdfd26] Fix mempool client
+  * [6d90316] Fix mempool client
+  * [0e54295] Fix mempool server loop iteration
+  * [b9dc096] Fix mempool server loop break
+  * [f0a4fc7] Timeout mempool client read in server (for BJS)
+  * [2498457] Regenerate windows bin
+  * [8ca3d8a] Fix some windows bugs to make win32 work again
+  * [3770cfe] Update windows bin
+  * [577e599] Use getblocktemplate instead of getrawmempool
+  * [5e8a9b0] Use both getrawmempool and getblocktemplate in RPCClient
+  * [4ea5c32] Allow multiple whitelists
+  * [4b055b2] Fix send-check
+  * [954e363] Revert "Use both getrawmempool and getblocktemplate in RPCClient"
+  * [c0d4393] Revert "Use getblocktemplate instead of getrawmempool"
+  * [6fe20d1] Make sorting stable between calls to reduce b/w significantly
+  * [843b2cf] Fix over-caffeinated bug
+  * [6c47937] Disable OOB-relay on clients for now (eats too much B/W)
+  * [0511d5d] Print mempool stats
+  * [d0ecfed] Make stats slightly more useful
+  * [474c5f1] Screw OS keepalives and do our own for mempool
+  * [e85dc3c] Break the infinite loop
+  * [e187d5d] Fix test
+  * [ddd0829] Prefetch next transaction before we hash the current one
+  * [a51c67e] Add trusted p2p pings to check alive-ness
+  * [5da6c4f] Print warning about identical fee txn
+
+  [ Jan Čapek ]
+  * [3fec43c] debian: fix project URL's in control
+  * [4764599] debian - gbp.conf: use external build area for package build output
+  * [986dedf] debian: build generic variant - prevent any CPU specific optimizations
+  * [1f8d699] c++: disable link-time optimization to enable builds for g++ 4.7.x
+
+ -- Jan Čapek <jan.capek@braiins.cz>  Tue, 20 Oct 2015 16:35:32 +0000
+
 relaynode (0.2-1) unstable; urgency=low
 
   [ kanoi ]
