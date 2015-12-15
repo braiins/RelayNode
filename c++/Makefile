@@ -47,7 +47,7 @@ endif
 
 ifeq ($(UNAME_S),Linux)
   ifneq ($(variant),test)
-    COMMON_CXXFLAGS += -flto
+    COMMON_CXXFLAGS += #-flto
   endif
   LDFLAGS += -Wl,--no-as-needed
   ifneq ($(variant),generic)
