@@ -8,7 +8,7 @@
 	dh $@
 
 override_dh_auto_build:
-	make -C c++ server-targets
+	$(MAKE) variant=generic -C c++ server-targets
 
 override_dh_auto_clean:
-	make -C c++ clean
+	$(MAKE) -C c++ clean
