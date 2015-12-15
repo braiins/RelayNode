@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <atomic>
+#include <sys/time.h>
 
 #define likely(x)   __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
@@ -60,12 +61,18 @@ struct relay_msg_header {
 };
 
 #define RELAY_MAGIC_BYTES htonl(0xF2BEEF42)
-#define VERSION_STRING "sponsor printer"
-#define MAX_RELAY_TRANSACTION_BYTES 10000
-#define MAX_RELAY_OVERSIZE_TRANSACTION_BYTES 200000
-#define MAX_EXTRA_OVERSIZE_TRANSACTIONS 25
+#define VERSION_STRING "spammy memeater"
+#define MAX_RELAY_TRANSACTION_BYTES 100000
+#define MAX_FAS_TOTAL_SIZE 5000000
 
-#define MAX_TXN_IN_FAS 5025
+#define OLD_MAX_RELAY_TRANSACTION_BYTES 10000
+#define OLD_MAX_RELAY_OVERSIZE_TRANSACTION_BYTES 200000
+#define OLD_MAX_EXTRA_OVERSIZE_TRANSACTIONS 25
+#define OLD_MAX_TXN_IN_FAS 5025
+
+// Limit outbound to avg 2Mbps worst-case (2Mb / 1000 ms)
+#define OUTBOUND_THROTTLE_BYTES_PER_MS 250
+
 
 
 #define BITCOIN_MAGIC htonl(0xf9beb4d9)
@@ -171,6 +178,23 @@ void do_assert(bool flag, const char* file, unsigned long line);
 #else
 #define ALWAYS_ASSERT assert
 #endif
+
+#define STAMPOUT() do { \
+		struct timeval now_tv; \
+		struct tm tm; \
+		int ms; \
+		gettimeofday(&now_tv, NULL); \
+		ms = (int)(now_tv.tv_usec / 1000); \
+		gmtime_r(&(now_tv.tv_sec), &tm); \
+		printf("[%d-%02d-%02d %02d:%02d:%02d.%03d+00] ", \
+			tm.tm_year + 1900, \
+			tm.tm_mon + 1, \
+			tm.tm_mday, \
+			tm.tm_hour, \
+			tm.tm_min, \
+			tm.tm_sec, \
+			ms); \
+	} while(0)
 
 /****************************************************************
  *** A mutex that gives acess to the count of waiting threads ***

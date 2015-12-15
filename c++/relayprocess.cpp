@@ -7,11 +7,23 @@
 std::shared_ptr<std::vector<unsigned char> > RelayNodeCompressor::get_relay_transaction(const std::shared_ptr<std::vector<unsigned char> >& tx) {
 	std::lock_guard<std::mutex> lock(mutex);
 
-	if (send_tx_cache.contains(tx) ||
-			(tx->size() > MAX_RELAY_TRANSACTION_BYTES &&
-				(send_tx_cache.flagCount() >= MAX_EXTRA_OVERSIZE_TRANSACTIONS || tx->size() > MAX_RELAY_OVERSIZE_TRANSACTION_BYTES)))
+	if (send_tx_cache.contains(tx))
 		return std::shared_ptr<std::vector<unsigned char> >();
-	send_tx_cache.add(tx, tx->size() > MAX_RELAY_TRANSACTION_BYTES);
+
+	if (!useOldFlags) {
+		if (tx->size() > MAX_RELAY_TRANSACTION_BYTES)
+			return std::shared_ptr<std::vector<unsigned char> >();
+		send_tx_cache.add(tx, tx->size());
+
+	}
+
+	if (useOldFlags) {
+		if (tx->size() > OLD_MAX_RELAY_TRANSACTION_BYTES &&
+				(send_tx_cache.flagCount() >= OLD_MAX_EXTRA_OVERSIZE_TRANSACTIONS || tx->size() > OLD_MAX_RELAY_OVERSIZE_TRANSACTION_BYTES))
+			return std::shared_ptr<std::vector<unsigned char> >();
+		send_tx_cache.add(tx, tx->size() > OLD_MAX_RELAY_TRANSACTION_BYTES);
+	}
+
 	return tx_to_msg(tx);
 }
 
@@ -23,7 +35,8 @@ void RelayNodeCompressor::reset() {
 }
 
 bool RelayNodeCompressor::check_recv_tx(uint32_t tx_size) {
-	return tx_size <= MAX_RELAY_TRANSACTION_BYTES || (recv_tx_cache.flagCount() < MAX_EXTRA_OVERSIZE_TRANSACTIONS && tx_size <= MAX_RELAY_OVERSIZE_TRANSACTION_BYTES);
+	return (!useOldFlags && tx_size <= MAX_RELAY_TRANSACTION_BYTES) ||
+			(useOldFlags && (tx_size <= OLD_MAX_RELAY_TRANSACTION_BYTES || (recv_tx_cache.flagCount() < OLD_MAX_EXTRA_OVERSIZE_TRANSACTIONS && tx_size <= OLD_MAX_RELAY_OVERSIZE_TRANSACTION_BYTES)));
 }
 
 bool RelayNodeCompressor::maybe_recv_tx_of_size(uint32_t tx_size, bool debug_print) {
@@ -42,7 +55,7 @@ void RelayNodeCompressor::recv_tx(std::shared_ptr<std::vector<unsigned char > > 
 
 	uint32_t tx_size = tx.get()->size();
 	assert(check_recv_tx(tx_size));
-	recv_tx_cache.add(tx, tx_size > MAX_RELAY_TRANSACTION_BYTES);
+	recv_tx_cache.add(tx, useOldFlags ? tx_size > OLD_MAX_RELAY_TRANSACTION_BYTES : tx_size);
 }
 
 void RelayNodeCompressor::for_each_sent_tx(const std::function<void (const std::shared_ptr<std::vector<unsigned char> >&)> callback) {
@@ -109,7 +122,7 @@ std::tuple<std::shared_ptr<std::vector<unsigned char> >, const char*> RelayNodeC
 		move_forward(readit, 4, block.end());
 #ifndef TEST_DATA
 		int32_t block_version = ((*(readit-1) << 24) | (*(readit-2) << 16) | (*(readit-3) << 8) | *(readit-4));
-		if (block_version < 3)
+		if (block_version < 4)
 			return std::make_tuple(std::make_shared<std::vector<unsigned char> >(), "SMALL_VERSION");
 #endif
 
@@ -233,8 +246,8 @@ std::tuple<uint32_t, std::shared_ptr<std::vector<unsigned char> >, const char*, 
 
 #ifndef TEST_DATA
 	int32_t block_version = (((*block)[sizeof(bitcoin_msg_header) + 3] << 24) | ((*block)[sizeof(bitcoin_msg_header) + 2] << 16) | ((*block)[sizeof(bitcoin_msg_header) + 1] << 8) | (*block)[sizeof(bitcoin_msg_header)]);
-	if (block_version < 3)
-		return std::make_tuple(0, std::shared_ptr<std::vector<unsigned char> >(NULL), "block had version < 3", std::shared_ptr<std::vector<unsigned char> >(NULL));
+	if (block_version < 4)
+		return std::make_tuple(0, std::shared_ptr<std::vector<unsigned char> >(NULL), "block had version < 4", std::shared_ptr<std::vector<unsigned char> >(NULL));
 #endif
 
 	auto fullhashptr = std::make_shared<std::vector<unsigned char> > (32);

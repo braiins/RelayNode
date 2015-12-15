@@ -18,23 +18,30 @@
 
 #define RELAY_DECLARE_CLASS_VARS \
 private: \
-	const uint32_t VERSION_TYPE, BLOCK_TYPE, TRANSACTION_TYPE, END_BLOCK_TYPE, MAX_VERSION_TYPE, OOB_TRANSACTION_TYPE, SPONSOR_TYPE;
+	const uint32_t VERSION_TYPE, BLOCK_TYPE, TRANSACTION_TYPE, END_BLOCK_TYPE, MAX_VERSION_TYPE, \
+					OOB_TRANSACTION_TYPE, SPONSOR_TYPE, PING_TYPE, PONG_TYPE;
 
 #define RELAY_DECLARE_CONSTRUCTOR_EXTENDS \
 	VERSION_TYPE(htonl(0)), BLOCK_TYPE(htonl(1)), TRANSACTION_TYPE(htonl(2)), END_BLOCK_TYPE(htonl(3)), \
-	MAX_VERSION_TYPE(htonl(4)), OOB_TRANSACTION_TYPE(htonl(5)), SPONSOR_TYPE(htonl(6))
+	MAX_VERSION_TYPE(htonl(4)), OOB_TRANSACTION_TYPE(htonl(5)), SPONSOR_TYPE(htonl(6)), PING_TYPE(htonl(7)), PONG_TYPE(htonl(8))
 
 class RelayNodeCompressor {
 	RELAY_DECLARE_CLASS_VARS
 
 private:
+	bool useOldFlags;
 	FlaggedArraySet send_tx_cache, recv_tx_cache;
 	mruset<std::vector<unsigned char> > blocksAlreadySeen;
 	std::mutex mutex;
 
 public:
-	RelayNodeCompressor(bool tucanTwink) : RELAY_DECLARE_CONSTRUCTOR_EXTENDS, send_tx_cache(tucanTwink ? 1525 : 5025, tucanTwink), recv_tx_cache(tucanTwink ? 1525 : 5025, tucanTwink), blocksAlreadySeen(1000000) {}
+	RelayNodeCompressor(bool useOldFlagsIn)
+		: RELAY_DECLARE_CONSTRUCTOR_EXTENDS, useOldFlags(useOldFlagsIn),
+		  send_tx_cache(useOldFlagsIn ? OLD_MAX_TXN_IN_FAS : 65000, useOldFlagsIn ? uint32_t(-1) : MAX_FAS_TOTAL_SIZE),
+		  recv_tx_cache(useOldFlagsIn ? OLD_MAX_TXN_IN_FAS : 65000, useOldFlagsIn ? uint32_t(-1) : MAX_FAS_TOTAL_SIZE),
+		  blocksAlreadySeen(1000000) {}
 	RelayNodeCompressor& operator=(const RelayNodeCompressor& c) {
+		useOldFlags = c.useOldFlags;
 		send_tx_cache = c.send_tx_cache;
 		recv_tx_cache = c.recv_tx_cache;
 		blocksAlreadySeen = c.blocksAlreadySeen;

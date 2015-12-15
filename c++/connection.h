@@ -7,6 +7,7 @@
 #include <thread>
 #include <list>
 #include <vector>
+#include <set>
 #include <assert.h>
 
 #include "utils.h"
@@ -14,8 +15,9 @@
 enum DisconnectFlags {
 	DISCONNECT_STARTED = 1,
 	DISCONNECT_PRINT_AND_CLOSE = 2,
-	DISCONNECT_GLOBAL_THREAD_DONE = 4,
-	DISCONNECT_COMPLETE = 8,
+	DISCONNECT_READS_DONE = 4,
+	DISCONNECT_GLOBAL_THREAD_DONE = 8,
+	DISCONNECT_COMPLETE = 16,
 };
 
 class Connection {
@@ -74,7 +76,7 @@ public:
 
 protected:
 	virtual void net_process(const std::function<void(std::string)>& disconnect)=0;
-	ssize_t read_all(char *buf, size_t nbyte, millis_lu_type max_sleep = millis_lu_type::max());
+	ssize_t read_all(char *buf, size_t nbyte, millis_lu_type max_sleep = millis_lu_type::max()); // Only allowed from within net_process
 
 	void do_send_bytes(const char *buf, size_t nbyte, int send_mutex_token=0) {
 		do_send_bytes(std::make_shared<std::vector<unsigned char> >((unsigned char*)buf, (unsigned char*)buf + nbyte), send_mutex_token);
@@ -106,7 +108,7 @@ private:
 	class OutboundConnection : public Connection {
 	private:
 		OutboundPersistentConnection *parent;
-		void net_process(const std::function<void(std::string)>& disconnect) { parent->net_process(disconnect); }
+		void net_process(const std::function<void(std::string)>& disconnect) { parent->on_connect_keepalive(); parent->net_process(disconnect); }
 
 	public:
 		OutboundConnection(int sockIn, OutboundPersistentConnection* parentIn) :
@@ -170,6 +172,34 @@ protected:
 private:
 	void reconnect(std::string disconnectReason); // Called only after DISCONNECT_COMPLETE in Connection, or before Connection::construction_done()
 	static void do_connect(OutboundPersistentConnection* me);
+
+	virtual void on_disconnect_keepalive() {}
+	virtual void on_connect_keepalive() {}
+	friend class KeepaliveOutboundPersistentConnection;
+};
+
+class KeepaliveOutboundPersistentConnection : public OutboundPersistentConnection {
+private:
+	std::mutex ping_mutex;
+	bool connected;
+	std::set<uint64_t> ping_nonces_waiting;
+	uint64_t next_nonce;
+
+	uint32_t ping_interval_msec;
+	bool scheduled;
+
+	void schedule();
+
+	void on_disconnect_keepalive();
+	void on_connect_keepalive();
+
+protected:
+	virtual void send_ping(uint64_t nonce)=0;
+	void pong_received(uint64_t nonce);
+
+public:
+	KeepaliveOutboundPersistentConnection(std::string serverHostIn, uint16_t serverPortIn,
+			uint32_t ping_interval_msec, uint32_t max_outbound_buffer_size_in=10000000);
 };
 
 #endif
