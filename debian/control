@@ -2,10 +2,10 @@ Source: relaynode
 Section: utils
 Priority: extra
 Maintainer: Jan Čapek <jan.capek@braiins.cz>
-Build-Depends: debhelper (>= 9.0.0)
+Build-Depends: debhelper (>= 9.0.0), yasm
 Standards-Version: 3.9.3
-Vcs-Git: https://github.com/honzik666/RelayNode
-Vcs-Browser: https://github.com/honzik666/RelayNode
+Vcs-Git: https://github.com/braiins/RelayNode
+Vcs-Browser: https://github.com/braiins/RelayNode
 
 Package: relaynode
 Architecture: any
