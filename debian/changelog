@@ -1,3 +1,43 @@
+relaynode (0.4-1) unstable; urgency=low
+
+  [ Matt Corallo ]
+  * [9b326ec] Fix connections getting stuck in state 3
+  * [2cac92b] Move rpcclient to only build with mempoolserver
+  * [a813efb] Add OPC that does auto-keepalive
+  * [78274d9] Use keepalive connection in P2PClient (now for ALL P2PClients)
+  * [9d2b28e] Fix RPCClient bug
+  * [58505f1] Sort by prio, not hash
+  * [434d99b] Move str->bin conversion into read loop
+  * [016f58e] Add PING_TYPE and PONG_TYPE messages to protocol
+  * [0658e9f] Use protocol-level keepalives in client
+  * [cf59fab] Use HASH_FORMAT in one more place
+  * [b28095d] Server-side changes to drop "toucan twink" and add "spammy memeater"
+  * [84f8abc] Client-side "spammy memeater" updates
+  * [d18e052] Switch to size-based accounting instead of tx-count
+  * [76709a0] Add "fasttest" variant
+  * [40d704f] Make client logging quiet until bitcoind is fully connected
+  * [ab9e8bb] Fix compile error
+  * [ea55c37] Update win32 bin
+  * [90f3ad2] Make bitcoind connection failures more obvious
+  * [d3238b2] Fix memory out-of-bounds reads in vectormruset
+  * [5a2ae71] Fix potential keepalive deadlock
+
+  [ kanoi ]
+  * [11283c9] Make a timestamp macro with ms and add to uncommon messages
+
+  [ Matt Corallo ]
+  * [e465966] Remove timestamp from relay proxy
+
+  [ James Hilliard ]
+  * [1751a57] Add nameser_compat.h header for OSX builds.
+
+  [ Matt Corallo ]
+  * [815c0e9] Enforce block version 4 instead of version 3
+
+  [ Jan Čapek ]
+
+ -- Jan Čapek <jan.capek@braiins.cz>  Tue, 15 Dec 2015 21:56:22 +0000
+
 relaynode (0.3-1) unstable; urgency=low
 
   [ Matt Corallo ]
